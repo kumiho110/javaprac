@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javaprac-db" default="db-help" basedir=".">
+
+    <property file="build.properties"/>
+
+    <property name="psql.bin" value="psql"/>
+    <property name="pgdump.bin" value="pg_dump"/>
+
+    <property name="db.dir" value="db"/>
+    <property name="sql.create" value="${db.dir}/create.sql"/>
+    <property name="sql.init" value="${db.dir}/init.sql"/>
+    <property name="sql.cleanup" value="${db.dir}/cleanup.sql"/>
+
+    <target name="db-help">
+        <echo>Targets:</echo>
+        <echo>  db-create   - run create.sql</echo>
+        <echo>  db-init     - run init.sql</echo>
+        <echo>  db-clean    - run cleanup.sql</echo>
+        <echo>  db-reset    - clean + create + init</echo>
+        <echo>  db-show     - show basic contents (counts)</echo>
+    </target>
+
+    <macrodef name="run-psql-file">
+        <attribute name="file"/>
+        <sequential>
+            <exec executable="${psql.bin}" failonerror="true">
+                <env key="PGPASSWORD" value="${db.password}"/>
+                <arg value="-h"/><arg value="${db.host}"/>
+                <arg value="-p"/><arg value="${db.port}"/>
+                <arg value="-U"/><arg value="${db.user}"/>
+                <arg value="-d"/><arg value="${db.name}"/>
+                <arg value="-f"/><arg value="@{file}"/>
+            </exec>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="run-psql-command">
+        <attribute name="sql"/>
+        <sequential>
+            <exec executable="${psql.bin}" failonerror="true">
+                <env key="PGPASSWORD" value="${db.password}"/>
+                <arg value="-h"/><arg value="${db.host}"/>
+                <arg value="-p"/><arg value="${db.port}"/>
+                <arg value="-U"/><arg value="${db.user}"/>
+                <arg value="-d"/><arg value="${db.name}"/>
+                <arg value="-c"/><arg value="@{sql}"/>
+            </exec>
+        </sequential>
+    </macrodef>
+
+    <target name="db-create">
+        <available file="${sql.create}" property="create.exists"/>
+        <fail unless="create.exists">Missing file: ${sql.create}</fail>
+        <run-psql-file file="${sql.create}"/>
+    </target>
+
+    <target name="db-init">
+        <available file="${sql.init}" property="init.exists"/>
+        <fail unless="init.exists">Missing file: ${sql.init}</fail>
+        <run-psql-file file="${sql.init}"/>
+    </target>
+
+    <target name="db-clean">
+        <available file="${sql.cleanup}" property="cleanup.exists"/>
+        <fail unless="cleanup.exists">Missing file: ${sql.cleanup}</fail>
+        <run-psql-file file="${sql.cleanup}"/>
+    </target>
+
+    <target name="db-reset" depends="db-clean,db-create,db-init"/>
+
+    <target name="db-dump">
+        <exec executable="${pgdump.bin}" failonerror="true" output="${dump.file}">
+            <env key="PGPASSWORD" value="${db.password}"/>
+            <arg value="-h"/><arg value="${db.host}"/>
+            <arg value="-p"/><arg value="${db.port}"/>
+            <arg value="-U"/><arg value="${db.user}"/>
+            <arg value="-d"/><arg value="${db.name}"/>
+            <arg value="--no-owner"/>
+            <arg value="--no-privileges"/>
+        </exec>
+        <echo>Dump written to ${dump.file}</echo>
+    </target>
+
+    <target name="db-show">
+        <run-psql-command sql="select 'product_type' as t, count(*) as c from product_type union all
+                               select 'manufacturer', count(*) from manufacturer union all
+                               select 'product', count(*) from product union all
+                               select 'product_attribute', count(*) from product_attribute union all
+                               select 'customer', count(*) from customer union all
+                               select 'orders', count(*) from orders union all
+                               select 'order_item', count(*) from order_item
+                               order by t;"/>
+    </target>
+
+</project>
