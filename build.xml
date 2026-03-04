@@ -1,23 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="javaprac-db" default="db-help" basedir=".">
+<project name="javaprac-db" default="help" basedir=".">
 
     <property file="build.properties"/>
 
     <property name="psql.bin" value="psql"/>
     <property name="pgdump.bin" value="pg_dump"/>
+    <property name="gradlew.bin" value="./gradlew"/>
 
     <property name="db.dir" value="db"/>
     <property name="sql.create" value="${db.dir}/create.sql"/>
     <property name="sql.init" value="${db.dir}/init.sql"/>
     <property name="sql.cleanup" value="${db.dir}/cleanup.sql"/>
 
-    <target name="db-help">
+    <property name="db.url" value="jdbc:postgresql://${db.host}:${db.port}/${db.name}"/>
+
+    <target name="help">
         <echo>Targets:</echo>
-        <echo>  db-create   - run create.sql</echo>
-        <echo>  db-init     - run init.sql</echo>
-        <echo>  db-clean    - run cleanup.sql</echo>
-        <echo>  db-reset    - clean + create + init</echo>
-        <echo>  db-show     - show basic contents (counts)</echo>
+        <echo>  db-create      - run create.sql</echo>
+        <echo>  db-init        - run init.sql</echo>
+        <echo>  db-clean       - run cleanup.sql</echo>
+        <echo>  db-reset       - clean + create + init</echo>
+        <echo>  db-show        - show basic contents (counts)</echo>
+        <echo>  compile        - build main project classes via Gradle</echo>
+        <echo>  compile-tests  - build test classes via Gradle</echo>
+        <echo>  test-db-reset  - clean DB + create schema for tests</echo>
+        <echo>  test           - reset empty DB and run tests via Gradle</echo>
+        <echo>  test-report    - reset empty DB, run tests, build JaCoCo report</echo>
     </target>
 
     <macrodef name="run-psql-file">
@@ -44,6 +52,18 @@
                 <arg value="-U"/><arg value="${db.user}"/>
                 <arg value="-d"/><arg value="${db.name}"/>
                 <arg value="-c"/><arg value="@{sql}"/>
+            </exec>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="run-gradle">
+        <attribute name="tasks"/>
+        <sequential>
+            <exec executable="${gradlew.bin}" failonerror="true">
+                <arg value="-Ddb.url=${db.url}"/>
+                <arg value="-Ddb.user=${db.user}"/>
+                <arg value="-Ddb.password=${db.password}"/>
+                <arg line="@{tasks}"/>
             </exec>
         </sequential>
     </macrodef>
@@ -82,14 +102,34 @@
     </target>
 
     <target name="db-show">
-        <run-psql-command sql="select 'product_type' as t, count(*) as c from product_type union all
-                               select 'manufacturer', count(*) from manufacturer union all
-                               select 'product', count(*) from product union all
-                               select 'product_attribute', count(*) from product_attribute union all
-                               select 'customer', count(*) from customer union all
-                               select 'orders', count(*) from orders union all
-                               select 'order_item', count(*) from order_item
-                               order by t;"/>
+        <run-psql-command sql="select 'app_user' as t, count(*) as c from app_user union all
+                           select 'product_type', count(*) from product_type union all
+                           select 'manufacturer', count(*) from manufacturer union all
+                           select 'product', count(*) from product union all
+                           select 'product_type_attribute', count(*) from product_type_attribute union all
+                           select 'product_attribute_value', count(*) from product_attribute_value union all
+                           select 'orders', count(*) from orders union all
+                           select 'order_item', count(*) from order_item
+                           order by t;"/>
+    </target>
+
+    <target name="compile">
+        <run-gradle tasks="classes"/>
+    </target>
+
+    <target name="compile-tests" depends="compile">
+        <run-gradle tasks="testClasses"/>
+    </target>
+
+    <target name="test-db-reset" depends="db-clean,db-create"/>
+
+    <target name="test" depends="test-db-reset,compile-tests">
+        <run-gradle tasks="cleanTest test"/>
+    </target>
+
+    <target name="test-report" depends="test-db-reset,compile-tests">
+        <run-gradle tasks="cleanTest test jacocoTestReport"/>
+        <echo>JaCoCo HTML report: build/reports/jacoco/test/html/index.html</echo>
     </target>
 
 </project>
