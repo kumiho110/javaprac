@@ -148,6 +148,11 @@ public abstract class BaseSystemTest {
     protected void logout() {
         if (pageContains("Выйти")) {
             clickButton("Выйти");
+            wait.until(ExpectedConditions.or(
+                    ExpectedConditions.urlToBe(baseUrl + "/"),
+                    ExpectedConditions.urlContains("/login")
+            ));
+            wait.until(ExpectedConditions.textToBePresentInElementLocated(By.tagName("body"), "Войти"));
         }
     }
 
