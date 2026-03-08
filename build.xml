@@ -14,18 +14,30 @@
 
     <property name="db.url" value="jdbc:postgresql://${db.host}:${db.port}/${db.name}"/>
 
+    <property name="app.port" value="8080"/>
+    <property name="app.baseUrl" value="http://localhost:${app.port}"/>
+    <property name="app.healthPath" value="/login"/>
+    <property name="app.jar" value="build/libs/javaprac-0.0.1-SNAPSHOT.jar"/>
+    <property name="app.log" value="build/app-local.log"/>
+    <property name="app.pidfile" value="build/app-local.pid"/>
+
     <target name="help">
         <echo>Targets:</echo>
-        <echo>  db-create      - run create.sql</echo>
-        <echo>  db-init        - run init.sql</echo>
-        <echo>  db-clean       - run cleanup.sql</echo>
-        <echo>  db-reset       - clean + create + init</echo>
-        <echo>  db-show        - show basic contents (counts)</echo>
-        <echo>  compile        - build main project classes via Gradle</echo>
-        <echo>  compile-tests  - build test classes via Gradle</echo>
-        <echo>  test-db-reset  - clean DB + create schema for tests</echo>
-        <echo>  test           - reset empty DB and run tests via Gradle</echo>
-        <echo>  test-report    - reset empty DB, run tests, build JaCoCo report</echo>
+        <echo>  db-create        - run create.sql</echo>
+        <echo>  db-init          - run init.sql</echo>
+        <echo>  db-clean         - run cleanup.sql</echo>
+        <echo>  db-reset         - clean + create + init</echo>
+        <echo>  db-show          - show basic contents (counts)</echo>
+        <echo>  db-dump          - dump database to ${dump.file}</echo>
+        <echo>  compile          - build main project classes via Gradle</echo>
+        <echo>  compile-tests    - build test classes via Gradle</echo>
+        <echo>  test-db-reset    - clean DB + create schema for DAO tests</echo>
+        <echo>  test             - reset empty DB and run DAO/unit tests via Gradle</echo>
+        <echo>  test-report      - reset empty DB, run DAO/unit tests, build JaCoCo report</echo>
+        <echo>  deploy-local     - reset seeded DB, build jar, start app locally</echo>
+        <echo>  undeploy-local   - stop locally started app</echo>
+        <echo>  system-test      - run Selenium system tests against local app</echo>
+        <echo>  system-test-stop - run system tests and then stop local app</echo>
     </target>
 
     <macrodef name="run-psql-file">
@@ -131,5 +143,55 @@
         <run-gradle tasks="cleanTest test jacocoTestReport"/>
         <echo>JaCoCo HTML report: build/reports/jacoco/test/html/index.html</echo>
     </target>
+
+    <target name="prepare-app-build">
+        <mkdir dir="build"/>
+    </target>
+
+    <target name="kill-old-local-if-any" depends="prepare-app-build">
+        <exec executable="/bin/sh" failonerror="false">
+            <arg value="-c"/>
+            <arg value="if [ -f '${app.pidfile}' ]; then PID=$(cat '${app.pidfile}'); if kill -0 $PID 2&gt;/dev/null; then kill $PID 2&gt;/dev/null || true; sleep 2; kill -9 $PID 2&gt;/dev/null || true; fi; rm -f '${app.pidfile}'; fi"/>
+        </exec>
+    </target>
+
+    <target name="build-app-jar">
+        <run-gradle tasks="clean bootJar"/>
+    </target>
+
+    <target name="deploy-local" depends="kill-old-local-if-any,db-reset,build-app-jar">
+        <available file="${app.jar}" property="app.jar.exists"/>
+        <fail unless="app.jar.exists">Missing jar: ${app.jar}</fail>
+
+        <exec executable="/bin/sh" failonerror="true">
+            <arg value="-c"/>
+            <arg value="nohup java -Dserver.port=${app.port} -Ddb.url=${db.url} -Ddb.user=${db.user} -Ddb.password=${db.password} -jar '${app.jar}' &gt; '${app.log}' 2&gt;&amp;1 &amp; echo $! &gt; '${app.pidfile}'"/>
+        </exec>
+
+        <waitfor maxwait="60" maxwaitunit="second" checkevery="2" checkeveryunit="second" timeoutproperty="app.start.timeout">
+            <http url="${app.baseUrl}${app.healthPath}"/>
+        </waitfor>
+
+        <fail if="app.start.timeout">Application did not become ready at ${app.baseUrl}${app.healthPath}. Check ${app.log}</fail>
+
+        <echo>Application started at ${app.baseUrl}</echo>
+    </target>
+
+    <target name="undeploy-local" depends="prepare-app-build">
+        <exec executable="/bin/sh" failonerror="false">
+            <arg value="-c"/>
+            <arg value="if [ -f '${app.pidfile}' ]; then PID=$(cat '${app.pidfile}'); if kill -0 $PID 2&gt;/dev/null; then kill $PID 2&gt;/dev/null || true; for i in 1 2 3 4 5; do if kill -0 $PID 2&gt;/dev/null; then sleep 1; else break; fi; done; if kill -0 $PID 2&gt;/dev/null; then kill -9 $PID 2&gt;/dev/null || true; fi; fi; rm -f '${app.pidfile}'; else true; fi"/>
+        </exec>
+    </target>
+
+    <target name="system-test" depends="deploy-local,compile-tests">
+        <run-gradle tasks="-DbaseUrl=${app.baseUrl} cleanSystemTest systemTest"/>
+    </target>
+
+    <target name="full-build" depends="deploy-local">
+        <echo>Application has been fully built and deployed at ${app.baseUrl}</echo>
+    </target>
+
+    <target name="system-test-stop" depends="system-test,undeploy-local"/>
 
 </project>

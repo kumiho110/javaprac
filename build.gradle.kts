@@ -42,23 +42,52 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.testng:testng:7.10.2")
 	testImplementation("org.assertj:assertj-core:3.25.3")
+	testImplementation("org.seleniumhq.selenium:selenium-java:4.27.0")
+	testImplementation("io.github.bonigarcia:webdrivermanager:5.9.2")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-tasks.withType<Test> {
+tasks.withType<Test>().configureEach {
 	useTestNG()
 }
 
 tasks.test {
 	useTestNG()
+
+	exclude("**/javaprac/system/**")
+
 	finalizedBy(tasks.jacocoTestReport)
 }
 
 tasks.jacocoTestReport {
 	dependsOn(tasks.test)
+
 	reports {
 		xml.required.set(true)
 		html.required.set(true)
 		csv.required.set(false)
 	}
+}
+
+val systemTest by tasks.registering(Test::class) {
+	description = "Runs Selenium system tests"
+	group = "verification"
+
+	useTestNG()
+
+	testClassesDirs = sourceSets["test"].output.classesDirs
+	classpath = sourceSets["test"].runtimeClasspath
+
+	include("**/javaprac/system/**")
+
+	systemProperty("baseUrl", System.getProperty("baseUrl") ?: "http://localhost:8080")
+	systemProperty("browser", System.getProperty("browser") ?: "chrome")
+
+	shouldRunAfter(tasks.test)
+}
+
+tasks.register<Delete>("cleanSystemTest") {
+	delete(systemTest.get().binaryResultsDirectory)
+	delete(layout.buildDirectory.dir("test-results/systemTest"))
+	delete(layout.buildDirectory.dir("reports/tests/systemTest"))
 }
