@@ -1,0 +1,53 @@
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+
+<c:url var="navLoginUrl" value="/login">
+    <c:param name="continue" value="${navContinueUrl}" />
+</c:url>
+
+<c:url var="navRegisterUrl" value="/register">
+    <c:param name="continue" value="${navContinueUrl}" />
+</c:url>
+
+<div style="margin-bottom: 12px;">
+    <c:choose>
+        <c:when test="${navIsAdmin}">
+            <a href="/admin">&#1040;&#1076;&#1084;&#1080;&#1085;-&#1075;&#1083;&#1072;&#1074;&#1085;&#1072;&#1103;</a> |
+            <a href="/staff/products">&#1058;&#1086;&#1074;&#1072;&#1088;&#1099;</a> |
+            <a href="/staff/orders">&#1047;&#1072;&#1082;&#1072;&#1079;&#1099;</a> |
+            <a href="/staff/catalog">&#1057;&#1087;&#1088;&#1072;&#1074;&#1086;&#1095;&#1085;&#1080;&#1082;&#1080;</a> |
+            <a href="/admin/users">&#1055;&#1086;&#1083;&#1100;&#1079;&#1086;&#1074;&#1072;&#1090;&#1077;&#1083;&#1080;</a> |
+            <a href="/admin/me">&#1055;&#1088;&#1086;&#1092;&#1080;&#1083;&#1100;</a>
+        </c:when>
+
+        <c:when test="${navIsManager}">
+            <a href="/staff/orders">&#1047;&#1072;&#1082;&#1072;&#1079;&#1099;</a> |
+            <a href="/staff/products">&#1058;&#1086;&#1074;&#1072;&#1088;&#1099;</a> |
+            <a href="/staff/catalog">&#1057;&#1087;&#1088;&#1072;&#1074;&#1086;&#1095;&#1085;&#1080;&#1082;&#1080;</a> |
+            <a href="/me">&#1055;&#1088;&#1086;&#1092;&#1080;&#1083;&#1100;</a>
+        </c:when>
+
+        <c:when test="${navIsUser}">
+            <a href="/">&#1043;&#1083;&#1072;&#1074;&#1085;&#1072;&#1103;</a> |
+            <a href="/products">&#1050;&#1072;&#1090;&#1072;&#1083;&#1086;&#1075;</a> |
+            <a href="/cart">&#1050;&#1086;&#1088;&#1079;&#1080;&#1085;&#1072; (<b>${navCartDistinctItemCount}</b>)</a> |
+            <a href="/my/orders">&#1052;&#1086;&#1080; &#1079;&#1072;&#1082;&#1072;&#1079;&#1099;</a> |
+            <a href="/me">&#1055;&#1088;&#1086;&#1092;&#1080;&#1083;&#1100;</a>
+        </c:when>
+
+        <c:otherwise>
+            <a href="/">&#1043;&#1083;&#1072;&#1074;&#1085;&#1072;&#1103;</a> |
+            <a href="/products">&#1050;&#1072;&#1090;&#1072;&#1083;&#1086;&#1075;</a> |
+            <a href="${navLoginUrl}">&#1042;&#1086;&#1081;&#1090;&#1080;</a> |
+            <a href="${navRegisterUrl}">&#1056;&#1077;&#1075;&#1080;&#1089;&#1090;&#1088;&#1072;&#1094;&#1080;&#1103;</a>
+        </c:otherwise>
+    </c:choose>
+</div>
+
+<c:if test="${navAuthenticated}">
+    <form method="post" action="/logout" style="display:inline; margin-top: 8px;">
+        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+        <button type="submit">&#1042;&#1099;&#1081;&#1090;&#1080;</button>
+    </form>
+</c:if>
+
+<hr/>
