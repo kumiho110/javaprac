@@ -32,6 +32,19 @@ public class ProductAttributeValueDaoHibernate
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public boolean existsByAttributeId(Long attributeId) {
+        Long count = session().createQuery(
+                        "select count(v.id) from ProductAttributeValue v where v.attribute.id = :attributeId",
+                        Long.class
+                )
+                .setParameter("attributeId", attributeId)
+                .uniqueResult();
+
+        return count != null && count > 0;
+    }
+
+    @Override
     @Transactional
     public void deleteByProductId(Long productId) {
         session().createMutationQuery(

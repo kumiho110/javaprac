@@ -7,5 +7,6 @@ import java.util.Optional;
 
 public interface ProductAttributeValueDao extends CommonDao<ProductAttributeValue, Long> {
     List<ProductAttributeValue> findByProductId(Long productId);
+    boolean existsByAttributeId(Long attributeId);
     void deleteByProductId(Long productId);
 }

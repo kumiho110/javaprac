@@ -28,7 +28,28 @@ public class ProductTypeDaoTestNG extends AbstractEntityManagerTest {
         Assert.assertEquals(persisted.getName(), "Телевизоры");
 
         List<ProductType> all = dao.findAll();
-        Assert.assertEquals(all.size(), 1);
-        Assert.assertEquals(all.get(0).getId(), type.getId());
+        Assert.assertTrue(all.stream().anyMatch(it -> it.getId().equals(type.getId())));
+    }
+
+    @Test
+    public void findByNameIgnoreCaseMustReturnMatchingType() {
+        ProductType type = new ProductType();
+        type.setName("Ноутбуки");
+        dao.save(type);
+        flushAndClear();
+
+        ProductType found = dao.findByNameIgnoreCase("нОуТбУкИ").orElseThrow();
+        Assert.assertEquals(found.getId(), type.getId());
+        Assert.assertEquals(found.getName(), "Ноутбуки");
+    }
+
+    @Test
+    public void findByNameIgnoreCaseMustReturnEmptyForUnknownName() {
+        Assert.assertTrue(dao.findByNameIgnoreCase("Неизвестный тип").isEmpty());
+    }
+
+    @Test
+    public void findByNameIgnoreCaseMustReturnEmptyForNull() {
+        Assert.assertTrue(dao.findByNameIgnoreCase(null).isEmpty());
     }
 }

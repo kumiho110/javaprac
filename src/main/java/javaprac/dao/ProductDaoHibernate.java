@@ -60,6 +60,32 @@ public class ProductDaoHibernate extends CommonDaoHibernate<Product, Long> imple
 
     @Override
     @Transactional(readOnly = true)
+    public boolean existsByTypeId(Long typeId) {
+        Long count = session().createQuery(
+                        "select count(p.id) from Product p where p.type.id = :typeId",
+                        Long.class
+                )
+                .setParameter("typeId", typeId)
+                .uniqueResult();
+
+        return count != null && count > 0;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsByManufacturerId(Long manufacturerId) {
+        Long count = session().createQuery(
+                        "select count(p.id) from Product p where p.manufacturer.id = :manufacturerId",
+                        Long.class
+                )
+                .setParameter("manufacturerId", manufacturerId)
+                .uniqueResult();
+
+        return count != null && count > 0;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<Product> search(String typeName,
                                 String manufacturerName,
                                 String attributeName,

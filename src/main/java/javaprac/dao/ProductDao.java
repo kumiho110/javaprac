@@ -13,6 +13,10 @@ public interface ProductDao extends CommonDao<Product, Long> {
 
     Product findByIdForUpdate(Long id);
 
+    boolean existsByTypeId(Long typeId);
+
+    boolean existsByManufacturerId(Long manufacturerId);
+
     List<Product> search(String typeName, String manufacturerName, String attributeName, String attributeValue);
 
     List<String> listAttributeNamesByType(String typeName);

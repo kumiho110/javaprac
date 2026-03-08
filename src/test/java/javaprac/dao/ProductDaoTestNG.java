@@ -1,6 +1,9 @@
 package javaprac.dao;
 
-import javaprac.model.*;
+import javaprac.model.Manufacturer;
+import javaprac.model.Product;
+import javaprac.model.ProductType;
+import javaprac.model.ProductTypeAttribute;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -66,6 +69,54 @@ public class ProductDaoTestNG extends AbstractEntityManagerTest {
     }
 
     @Test
+    public void findByIdWithAttributesMustLoadAttributes() {
+        ProductType tv = persistProductType("TV");
+        Manufacturer samsung = persistManufacturer("Samsung");
+
+        Product tvBlue = persistProduct(tv, samsung, "TV Blue", new BigDecimal("1000.00"), 5);
+
+        ProductTypeAttribute colorTv = persistAttribute(tv, "Color", 10, true);
+        ProductTypeAttribute sizeTv = persistAttribute(tv, "Size", 20, false);
+
+        persistAttributeValue(tvBlue, colorTv, "Blue");
+        persistAttributeValue(tvBlue, sizeTv, "55");
+
+        flushAndClear();
+
+        Product withAttributes = dao.findByIdWithAttributes(tvBlue.getId()).orElseThrow();
+        Assert.assertEquals(withAttributes.getAttributeValues().size(), 2);
+        Assert.assertTrue(dao.findByIdWithAttributes(999999L).isEmpty());
+    }
+
+    @Test
+    public void existsByTypeIdMustReturnTrueOnlyForUsedType() {
+        ProductType usedType = persistProductType("Phone");
+        ProductType unusedType = persistProductType("Tablet");
+        Manufacturer manufacturer = persistManufacturer("Apple");
+
+        persistProduct(usedType, manufacturer, "iPhone", new BigDecimal("1000.00"), 5);
+        flushAndClear();
+
+        Assert.assertTrue(dao.existsByTypeId(usedType.getId()));
+        Assert.assertFalse(dao.existsByTypeId(unusedType.getId()));
+        Assert.assertFalse(dao.existsByTypeId(-1L));
+    }
+
+    @Test
+    public void existsByManufacturerIdMustReturnTrueOnlyForUsedManufacturer() {
+        ProductType type = persistProductType("Phone");
+        Manufacturer usedManufacturer = persistManufacturer("Apple");
+        Manufacturer unusedManufacturer = persistManufacturer("Samsung");
+
+        persistProduct(type, usedManufacturer, "iPhone", new BigDecimal("1000.00"), 5);
+        flushAndClear();
+
+        Assert.assertTrue(dao.existsByManufacturerId(usedManufacturer.getId()));
+        Assert.assertFalse(dao.existsByManufacturerId(unusedManufacturer.getId()));
+        Assert.assertFalse(dao.existsByManufacturerId(-1L));
+    }
+
+    @Test
     public void productSearchAndAttributeLookupsMustCoverAllBranches() {
         ProductType tv = persistProductType("TV");
         ProductType fridge = persistProductType("Fridge");
@@ -88,10 +139,6 @@ public class ProductDaoTestNG extends AbstractEntityManagerTest {
         flushAndClear();
 
         Assert.assertEquals(dao.findAllWithRefs().size(), 3);
-
-        Product withAttributes = dao.findByIdWithAttributes(tvBlue.getId()).orElseThrow();
-        Assert.assertEquals(withAttributes.getAttributeValues().size(), 2);
-        Assert.assertTrue(dao.findByIdWithAttributes(999999L).isEmpty());
 
         Assert.assertEquals(dao.search(null, null, null, null).size(), 3);
         Assert.assertEquals(dao.search(tv.getName(), null, null, null).size(), 2);
