@@ -6,12 +6,15 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "product_type")
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString
+@ToString(exclude = {"attributes"})
 public class ProductType implements Identifiable<Long> {
 
     @Id
@@ -20,4 +23,7 @@ public class ProductType implements Identifiable<Long> {
 
     @Column(name = "name", nullable = false, unique = true, length = 100)
     private String name;
+
+    @OneToMany(mappedBy = "productType", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProductTypeAttribute> attributes = new ArrayList<>();
 }
